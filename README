@@ -1,4 +1,9 @@
-- Command-line compile.  In the connectx/ directory run::
+# MNK Game (A.A. 2022-2023)
+## Antonio is a player developed by Marco Milani e Simone Tassi 
+
+### Instructions:
+
+- Command-line compile.  In the connectx/ directory run:
 
 		javac -cp ".." *.java */*.java
 
