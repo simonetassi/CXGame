@@ -23,70 +23,67 @@ public class Antonio implements CXPlayer {
 
     public void initPlayer(int M, int N, int K, boolean first, int timeout_in_secs) {
         rand = new Random(System.currentTimeMillis());
-        // B = new CXBoard(M, N, K);
+        // B = new CXBoard(M, N, K); // TODO capire??''
         myWin = first ? CXGameState.WINP1 : CXGameState.WINP2;
         yourWin = first ? CXKGameState.WINP2 : CXGameState.WINP1;
         TIMEOUT = timeout_in_secs;
     }
 
     private void checktime() throws TimeoutException {
-		if ((System.currentTimeMillis() - START) / 1000.0 >= TIMEOUT * (99.0 / 100.0))
-			throw new TimeoutException();
-	}
-
-    private int singleMoveWin(CXBoard B, Integer[] L) throws TimeoutException {
-        for(int i : L) {
-                checktime(); // Check timeout at every iteration
-          CXGameState state = B.markColumn(i);
-          if (state == myWin)
-            return i; // Winning column found: return immediately
-          B.unmarkColumn();
-        }
-            return -1;
+        if ((System.currentTimeMillis() - START) / 1000.0 >= TIMEOUT * (99.0 / 100.0))
+            throw new TimeoutException();
     }
 
-    // TODO NON SERVE CONTROLLARE TUTTE LE VOLTE TUTTA LA TABELLA
+    private int singleMoveWin(CXBoard B, Integer[] L) throws TimeoutException {
+        for (int i : L) {
+            checktime(); // Check timeout at every iteration
+            CXGameState state = B.markColumn(i);
+            if (state == myWin)
+                return i; // Winning column found: return immediately
+            B.unmarkColumn();
+        }
+        return -1;
+    }
+    
+    // ABBIAMO CONTROLLATO TUTTE LE MOSSE CHE POTREBBE FARE L'AVVERSARIO IMMEDIATAMENTE
+    // SENZA CONSIDERARE LE MOSSE CHE POTREBBE FARE SOPRA ALLA NOSTRA FUTURA MOSSA
+
+    // NON SERVE CONTROLLARE TUTTE LE VOLTE TUTTA LA TABELLA
     // BASTA CONTROLLARE QUELLA IN CUI SI METTE L'IPOTETICA MOSSA
     private int singleMoveBlock(CXBoard B, Integer[] L) throws TimeoutException {
-		TreeSet<Integer> T = new TreeSet<Integer>(); // We collect here safe column indexes
-
-		for(int i : L) {
-			checktime();
-			T.add(i); // We consider column i as a possible move
-			B.markColumn(i);
-
-			int j;
-			boolean stop;
-
-			for(j = 0, stop=false; j < L.length && !stop; j++) {
-				//try {Thread.sleep((int)(0.2*1000*TIMEOUT));} catch (Exception e) {} // Uncomment to test timeout
-				checktime();
-				if(!B.fullColumn(L[j])) {
-					CXGameState state = B.markColumn(L[j]);
-					if (state == yourWin) {
-						T.remove(i); // We ignore the i-th column as a possible move
-						stop = true; // We don't need to check more
-					}
-					B.unmarkColumn(); // 
-				}
-			}
-			B.unmarkColumn();
-		}
-
-		if (T.size() > 0) {
-			Integer[] X = T.toArray(new Integer[T.size()]);
- 			return X[rand.nextInt(X.length)];
-		} else {
-			return L[rand.nextInt(L.length)];
-		}
-	}
-
+        Integer[] F = B.getAvailableColumns();
+        checktime();
+        B.markColumn(F[0]);
+        for (j = F[0 + 1]; j < L.length; j++) {
+            // try {Thread.sleep((int)(0.2*1000*TIMEOUT));} catch (Exception e) {} //
+            // Uncomment to test timeout
+            checktime();
+            if (!B.fullColumn(L[j])) {
+                CXGameState state = B.markColumn(L[j]);
+                if (state == yourWin) {
+                    B.unmarkColumn();
+                    B.unmarkColumn();
+                    return j;
+                }
+                B.unmarkColumn();
+            }
+        }
+        B.unmarkColumn();
+        B.markColumn(F[0 + 1]);
+        B.markColumn(F[0]);
+        if (state == yourWin) {
+            B.unmarkColumn();
+            B.unmarkColumn();
+            return F[0];
+        }
+        B.unmarkColumn();
+        B.unmarkColumn();
+    }
 
     public MNKCell selectColumn(CXBoard B) {
         start = System.currentTimeMillis();
 
         Integer[] L = B.getAvailableColumns();
-        int save    = L[rand.nextInt(L.length)]; // TODO PENSARE A COSA RESTITUIRE 
 
         // recupero l'ultima mossa dell'avversario (se e' stata fatta)
         if (MC.length > 0) {
@@ -100,19 +97,18 @@ public class Antonio implements CXPlayer {
             return L[0];
         }
 
-        
         try {
             // vincita con una mossa sola
-			int col = singleMoveWin(B,L);
-			if(col != -1) 
-				return col;
-			else
+            int col = singleMoveWin(B, L);
+            if (col != -1)
+                return col;
+            else
                 // sconfitta alla prossima mossa dell'avversario
-				return singleMoveBlock(B,L);
-		} catch (TimeoutException e) {
-			System.err.println("Timeout!!! Random column selected");
-			return save;
-		}
+                return singleMoveBlock(B, L);
+        } catch (TimeoutException e) {
+            System.err.println("Timeout!!! Random column selected");
+            return alphabeta; // TODO qua bisogna metterci alphabeta
+        }
         B.unmarkCell(); // annullo la mossa iniziale del bot e procedo a valutazione dei casi generici
 
         // alphabeta
