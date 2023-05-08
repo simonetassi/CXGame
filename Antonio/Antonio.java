@@ -15,7 +15,7 @@ public class Antonio implements CXPlayer {
     private CXGameState myWin;
     private CXGameState yourWin;
     private int TIMEOUT;
-    private long start;
+    private long START;
     private static int MAX = 100, MIN = -MAX;
 
     public Antonio() {
@@ -23,9 +23,9 @@ public class Antonio implements CXPlayer {
 
     public void initPlayer(int M, int N, int K, boolean first, int timeout_in_secs) {
         rand = new Random(System.currentTimeMillis());
-        // B = new CXBoard(M, N, K); // TODO capire??''
+        // B = new CXBoard(M, N, K); // capire
         myWin = first ? CXGameState.WINP1 : CXGameState.WINP2;
-        yourWin = first ? CXKGameState.WINP2 : CXGameState.WINP1;
+        yourWin = first ? CXGameState.WINP2 : CXGameState.WINP1;
         TIMEOUT = timeout_in_secs;
     }
 
@@ -44,8 +44,9 @@ public class Antonio implements CXPlayer {
         }
         return -1;
     }
-    
-    // ABBIAMO CONTROLLATO TUTTE LE MOSSE CHE POTREBBE FARE L'AVVERSARIO IMMEDIATAMENTE
+
+    // ABBIAMO CONTROLLATO TUTTE LE MOSSE CHE POTREBBE FARE L'AVVERSARIO
+    // IMMEDIATAMENTE
     // SENZA CONSIDERARE LE MOSSE CHE POTREBBE FARE SOPRA ALLA NOSTRA FUTURA MOSSA
 
     // NON SERVE CONTROLLARE TUTTE LE VOLTE TUTTA LA TABELLA
@@ -54,7 +55,7 @@ public class Antonio implements CXPlayer {
         Integer[] F = B.getAvailableColumns();
         checktime();
         B.markColumn(F[0]);
-        for (j = F[0 + 1]; j < L.length; j++) {
+        for (int j = F[0 + 1]; j < L.length; j++) {
             // try {Thread.sleep((int)(0.2*1000*TIMEOUT));} catch (Exception e) {} //
             // Uncomment to test timeout
             checktime();
@@ -70,7 +71,7 @@ public class Antonio implements CXPlayer {
         }
         B.unmarkColumn();
         B.markColumn(F[0 + 1]);
-        B.markColumn(F[0]);
+        CXGameState state = B.markColumn(F[0]);
         if (state == yourWin) {
             B.unmarkColumn();
             B.unmarkColumn();
@@ -78,17 +79,21 @@ public class Antonio implements CXPlayer {
         }
         B.unmarkColumn();
         B.unmarkColumn();
+        return -1;
     }
 
-    public MNKCell selectColumn(CXBoard B) {
-        start = System.currentTimeMillis();
+    public int selectColumn(CXBoard B) {
+        START = System.currentTimeMillis();
 
         Integer[] L = B.getAvailableColumns();
+        int random = L[rand.nextInt(L.length)]; // Salva una colonna random
+        CXCell[] MC = B.getMarkedCells();
+        int toMark = L[0];
 
         // recupero l'ultima mossa dell'avversario (se e' stata fatta)
         if (MC.length > 0) {
-            MNKCell c = MC[MC.length - 1];
-            B.markCell(c.i, c.j);
+            CXCell c = MC[MC.length - 1];
+            B.markColumn(c.j);
         }
 
         // una sola mossa possibile
@@ -99,68 +104,61 @@ public class Antonio implements CXPlayer {
 
         try {
             // vincita con una mossa sola
-            int col = singleMoveWin(B, L);
-            if (col != -1)
-                return col;
-            else
-                // sconfitta alla prossima mossa dell'avversario
-                return singleMoveBlock(B, L);
-        } catch (TimeoutException e) {
-            System.err.println("Timeout!!! Random column selected");
-            return alphabeta; // TODO qua bisogna metterci alphabeta
-        }
-        B.unmarkCell(); // annullo la mossa iniziale del bot e procedo a valutazione dei casi generici
+            int colW = singleMoveWin(B, L);
+            if (colW != -1)
+                return colW;
+            // sconfitta alla prossima mossa dell'avversario
+            int colL = singleMoveBlock(B, L);
+            if (colL != -1)
+                return colL;
 
-        // alphabeta
-        // seleziono della depth massima in base a dimensione board
-        MNKCell toMark = FC[0];
-        int depth;
-        if ((B.M * B.N) < 50) {
-            depth = 5;
-        } else if ((B.M * B.N) < 275) {
-            depth = 3;
-        } else {
-            depth = 1;
-        }
-        int outcome = Integer.MIN_VALUE, maxOutcome = outcome;
-
-        MNKCell[] cells = B.getFreeCells();
-
-        // esamino tutte le celle libere
-        for (MNKCell cellIt : cells) {
-            if ((System.currentTimeMillis() - start) / 1000.0 > TIMEOUT * (97.0 / 100.0)) { // se non faccio in tempo a
-                                                                                            // trovare la mossa migliore
-                                                                                            // -> break
-                break;
+            // alphabeta
+            // seleziono della depth massima in base a dimensione board
+            int depth;
+            if ((B.M * B.N) < 50) {
+                depth = 5;
+            } else if ((B.M * B.N) < 275) {
+                depth = 3;
             } else {
-                B.markCell(cellIt.i, cellIt.j); // marco mossa da valutare
-                outcome = AlphaBetaPruning(B, false, Integer.MIN_VALUE, Integer.MAX_VALUE, depth);
-                B.unmarkCell();
-                if (outcome > maxOutcome) { // confronto il risultato della visita alpha beta corrente con quella
+                depth = 1;
+            }
+            int outcome = Integer.MIN_VALUE, maxOutcome = outcome;
+
+            // esamino tutte le colonne libere
+            for (int colIt : L) {
+                checktime();
+                CXGameState stateAB = B.markColumn(colIt); // marco mossa da valutare
+                outcome = AlphaBetaPruning(B, false, Integer.MIN_VALUE, Integer.MAX_VALUE, depth, stateAB);
+                B.unmarkColumn();
+                if (outcome > maxOutcome) { // confronto il risultato della visita alpha beta corrente con
+                                            // quella
                                             // precedente per salvare quello piu' vantaggioso
                     maxOutcome = outcome;
-                    toMark = cellIt;
+                    toMark = colIt;
                 }
-            }
-        }
 
-        B.markCell(toMark.i, toMark.j);
-        return toMark;
+            }
+            B.markColumn(toMark);
+            return toMark;
+        } catch (TimeoutException e) {
+            System.err.println("Timeout!!! Last computed column selected");
+            return toMark;
+        }
     }
 
-    public int AlphaBetaPruning(MNKBoard B, boolean playerAntonio, int alpha, int beta, int depth) {
+    public int AlphaBetaPruning(CXBoard B, boolean playerAntonio, int alpha, int beta, int depth, CXGameState stateAB) {
         int eval;
-        if (!B.gameState().equals(MNKGameState.OPEN) || (depth == 0)
-                || (System.currentTimeMillis() - start) / 1000.0 > TIMEOUT * (97.0 / 100.0)) {
-            return evaluate(B.gameState());
+        if (!stateAB.equals(CXGameState.OPEN) || (depth == 0)
+                || (System.currentTimeMillis() - START) / 1000.0 > TIMEOUT * (97.0 / 100.0)) {
+            return evaluate(stateAB);
         } else if (playerAntonio) { // MAX player
             eval = Integer.MIN_VALUE;
-            MNKCell[] cells = B.getFreeCells();
-            for (MNKCell c : cells) {
-                B.markCell(c.i, c.j);
-                eval = Math.max(eval, AlphaBetaPruning(B, !playerAntonio, alpha, beta, depth - 1));
+            Integer[] cols = B.getAvailableColumns();
+            for (int c : cols) {
+                CXGameState state = B.markColumn(c);
+                eval = Math.max(eval, AlphaBetaPruning(B, !playerAntonio, alpha, beta, depth - 1, state));
                 alpha = Math.max(eval, alpha);
-                B.unmarkCell();
+                B.unmarkColumn();
                 if (beta <= alpha) { // β cutoff
                     break;
                 }
@@ -168,12 +166,12 @@ public class Antonio implements CXPlayer {
             return eval;
         } else {// MIN player
             eval = Integer.MAX_VALUE;
-            MNKCell[] cells = B.getFreeCells();
-            for (MNKCell c : cells) {
-                B.markCell(c.i, c.j);
-                eval = Math.min(eval, AlphaBetaPruning(B, !playerAntonio, alpha, beta, depth - 1));
+            Integer[] cols = B.getAvailableColumns();
+            for (int c : cols) {
+                CXGameState state = B.markColumn(c);
+                eval = Math.min(eval, AlphaBetaPruning(B, !playerAntonio, alpha, beta, depth - 1, state));
                 beta = Math.min(eval, beta);
-                B.unmarkCell();
+                B.unmarkColumn();
                 if (beta <= alpha) { // α cutoff
                     break;
                 }
@@ -182,12 +180,12 @@ public class Antonio implements CXPlayer {
         }
     }
 
-    public int evaluate(MNKGameState s) {
+    public int evaluate(CXGameState s) {
         if (s == myWin) { // vinco
             return MAX;
         } else if (s == yourWin) { // perdo
             return MIN;
-        } else if (s == MNKGameState.DRAW) { // pareggio
+        } else if (s == CXGameState.DRAW) { // pareggio
             return 0;
         } else { // max depth
             return 0;
