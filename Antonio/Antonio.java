@@ -23,7 +23,6 @@ public class Antonio implements CXPlayer {
 
     public void initPlayer(int M, int N, int K, boolean first, int timeout_in_secs) {
         rand = new Random(System.currentTimeMillis());
-        // B = new CXBoard(M, N, K); // capire
         myWin = first ? CXGameState.WINP1 : CXGameState.WINP2;
         yourWin = first ? CXGameState.WINP2 : CXGameState.WINP1;
         TIMEOUT = timeout_in_secs;
@@ -52,30 +51,26 @@ public class Antonio implements CXPlayer {
     // NON SERVE CONTROLLARE TUTTE LE VOLTE TUTTA LA TABELLA
     // BASTA CONTROLLARE QUELLA IN CUI SI METTE L'IPOTETICA MOSSA
     private int singleMoveBlock(CXBoard B, Integer[] L) throws TimeoutException {
-        Integer[] F = B.getAvailableColumns();
-        checktime();
-        B.markColumn(F[0]);
-        for (int j = F[0 + 1]; j < L.length; j++) {
+        B.markColumn(L[0]);
+        for (int j = L[0 + 1]; j < L.length; j++) {
             // try {Thread.sleep((int)(0.2*1000*TIMEOUT));} catch (Exception e) {} //
             // Uncomment to test timeout
             checktime();
-            if (!B.fullColumn(L[j])) {
-                CXGameState state = B.markColumn(L[j]);
-                if (state == yourWin) {
-                    B.unmarkColumn();
-                    B.unmarkColumn();
-                    return j;
-                }
+            CXGameState state = B.markColumn(L[j]);
+            if (state == yourWin) {
                 B.unmarkColumn();
+                B.unmarkColumn();
+                return L[j];
             }
+            B.unmarkColumn();
         }
         B.unmarkColumn();
-        B.markColumn(F[0 + 1]);
-        CXGameState state = B.markColumn(F[0]);
+        B.markColumn(L[0 + 1]);
+        CXGameState state = B.markColumn(L[0]);
         if (state == yourWin) {
             B.unmarkColumn();
             B.unmarkColumn();
-            return F[0];
+            return L[0];
         }
         B.unmarkColumn();
         B.unmarkColumn();
@@ -86,19 +81,11 @@ public class Antonio implements CXPlayer {
         START = System.currentTimeMillis();
 
         Integer[] L = B.getAvailableColumns();
-        int random = L[rand.nextInt(L.length)]; // Salva una colonna random
-        CXCell[] MC = B.getMarkedCells();
-        int toMark = L[0];
+        int toMark = L[rand.nextInt(L.length)]; // inizializzo a random
 
-        // recupero l'ultima mossa dell'avversario (se e' stata fatta)
-        if (MC.length > 0) {
-            CXCell c = MC[MC.length - 1];
-            B.markColumn(c.j);
-        }
-
-        // una sola mossa possibile
+        // una sola colonna libera
         if (L.length == 1) {
-            B.markColumn(L[0]);
+            // B.markColumn(L[0]);
             return L[0];
         }
 
@@ -116,11 +103,11 @@ public class Antonio implements CXPlayer {
             // seleziono della depth massima in base a dimensione board
             int depth;
             if ((B.M * B.N) < 50) {
-                depth = 5;
+                depth = 10;
             } else if ((B.M * B.N) < 275) {
-                depth = 3;
+                depth = 7;
             } else {
-                depth = 1;
+                depth = 3;
             }
             int outcome = Integer.MIN_VALUE, maxOutcome = outcome;
 
@@ -138,7 +125,7 @@ public class Antonio implements CXPlayer {
                 }
 
             }
-            B.markColumn(toMark);
+            // B.markColumn(toMark);
             return toMark;
         } catch (TimeoutException e) {
             System.err.println("Timeout!!! Last computed column selected");
@@ -149,7 +136,7 @@ public class Antonio implements CXPlayer {
     public int AlphaBetaPruning(CXBoard B, boolean playerAntonio, int alpha, int beta, int depth, CXGameState stateAB) {
         int eval;
         if (!stateAB.equals(CXGameState.OPEN) || (depth == 0)
-                || (System.currentTimeMillis() - START) / 1000.0 > TIMEOUT * (97.0 / 100.0)) {
+                || (System.currentTimeMillis() - START) / 1000.0 > TIMEOUT * (99.0 / 100.0)) {
             return evaluate(stateAB);
         } else if (playerAntonio) { // MAX player
             eval = Integer.MIN_VALUE;
