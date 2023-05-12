@@ -109,6 +109,7 @@ public class Antonio implements CXPlayer {
             } else {
                 depth = 3;
             }
+            System.out.println(depth);;
             int outcome = Integer.MIN_VALUE, maxOutcome = outcome;
 
             // esamino tutte le colonne libere
@@ -120,6 +121,7 @@ public class Antonio implements CXPlayer {
                 if (outcome > maxOutcome) { // confronto il risultato della visita alpha beta corrente con
                                             // quella
                                             // precedente per salvare quello piu' vantaggioso
+                    // System.out.println(colIt);
                     maxOutcome = outcome;
                     toMark = colIt;
                 }
@@ -135,8 +137,8 @@ public class Antonio implements CXPlayer {
 
     public int AlphaBetaPruning(CXBoard B, boolean playerAntonio, int alpha, int beta, int depth, CXGameState stateAB) {
         int eval;
-        if (!stateAB.equals(CXGameState.OPEN) || (depth == 0)
-                || (System.currentTimeMillis() - START) / 1000.0 > TIMEOUT * (99.0 / 100.0)) {
+        // System.out.println(stateAB);
+        if (!stateAB.equals(CXGameState.OPEN) || (depth == 0)) {
             return evaluate(stateAB);
         } else if (playerAntonio) { // MAX player
             eval = Integer.MIN_VALUE;
