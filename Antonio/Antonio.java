@@ -4,6 +4,8 @@ import connectx.CXPlayer;
 import connectx.CXBoard;
 import connectx.CXGameState;
 import connectx.CXCell;
+import connectx.CXCellState;
+
 import java.util.TreeSet;
 import java.util.Random;
 import java.util.Arrays;
@@ -103,13 +105,12 @@ public class Antonio implements CXPlayer {
             // seleziono della depth massima in base a dimensione board
             int depth;
             if ((B.M * B.N) < 50) {
-                depth = 10;
+                depth = 5;
             } else if ((B.M * B.N) < 275) {
                 depth = 7;
             } else {
                 depth = 3;
             }
-            System.out.println(depth);;
             int outcome = Integer.MIN_VALUE, maxOutcome = outcome;
 
             // esamino tutte le colonne libere
@@ -139,7 +140,16 @@ public class Antonio implements CXPlayer {
         int eval;
         // System.out.println(stateAB);
         if (!stateAB.equals(CXGameState.OPEN) || (depth == 0)) {
-            return evaluate(stateAB);
+            if (stateAB == myWin) { // vinco
+                return MAX;
+            } else if (stateAB == yourWin) { // perdo
+                return MIN;
+            } else if (stateAB == CXGameState.DRAW) { // pareggio
+                return 0;
+            } else { // max depth
+                int maxd = evaluate(B);
+                return maxd;
+            }
         } else if (playerAntonio) { // MAX player
             eval = Integer.MIN_VALUE;
             Integer[] cols = B.getAvailableColumns();
@@ -169,17 +179,96 @@ public class Antonio implements CXPlayer {
         }
     }
 
-    public int evaluate(CXGameState s) {
-        if (s == myWin) { // vinco
-            return MAX;
-        } else if (s == yourWin) { // perdo
-            return MIN;
-        } else if (s == CXGameState.DRAW) { // pareggio
-            return 0;
-        } else { // max depth
-            return 0;
+    public int evaluate(CXBoard B) {
+        CXCell move = B.getLastMove();
+        int cont, maxCont;
+        // controllo verticale
+        for (cont = 1; (move.i - cont) >= 0; cont++) {
+            if (B.cellState((move.i - cont), move.j) == CXCellState.P2) {
+                cont++;
+                break;
+            }
         }
+        cont = cont - 1;
+        System.out.println("Vert:" + cont);
+        maxCont = cont;
+
+        // controllo orizzontale
+        int l, r; // contatori left e right
+        boolean l_bound = true, r_bound = true; // variabili per il controllo della presenza di avversari alla fine
+                                                // della serie
+                                                // di chip consecutive
+
+        // conta verso sinistra
+        for (cont = 1; (move.j - cont) >= 0; cont++) {
+            if (B.cellState(move.i, (move.j - cont)) != CXCellState.P1) {
+                l_bound = (B.cellState(move.i, (move.j - cont)) == CXCellState.P2);
+                cont++;
+                break;
+            }
+        }
+        l = cont - 1;
+
+        // conta verso destra
+        for (cont = 1; (move.j + cont) < B.N; cont++) {
+            if (B.cellState(move.i, (move.j + cont)) != CXCellState.P1) {
+                r_bound = (B.cellState(move.i, (move.j + cont)) == CXCellState.P2);
+                cont++;
+                break;
+            }
+        }
+        r = cont - 1;
+
+        // se sia a sinistra che a destra siamo bloccati da avversario allora la mossa
+        // non ha valore (orizzontalmente)
+        if (r_bound && l_bound) {
+            cont = 0;
+        } else {
+            cont = r + l + 1;
+        }
+        System.out.println("Orizz:" + cont);
+        maxCont = Math.max(cont, maxCont);
+
+        // controllo diagonale dx
+        // int l_down, r_up; // contatori left e right
+        // boolean l_down_bound = true, r_up_bound = true; // variabili per il controllo della presenza di avversari alla
+        //                                                 // fine della serie di chip consecutive
+
+        // // conta in basso a sinistra
+        // for (cont = 1; (((move.i - cont) >= 0) && ((move.j - cont) >= 0)); cont++) {
+        //     if (B.cellState((move.i - cont), (move.j - cont)) != CXCellState.P1) {
+        //         l_down_bound = (B.cellState((move.i - cont), (move.j - cont)) == CXCellState.P2);
+        //         cont++;
+        //         break;
+        //     }
+        // }
+        // l_down = cont - 1;
+
+        // // conta in alto a destra
+        // for (cont = 1; (((move.i + cont) < B.M) && ((move.j + cont) < B.N)); cont++) {
+        //     if (B.cellState((move.i + cont), (move.j + cont)) != CXCellState.P1) {
+        //         r_up_bound = (B.cellState((move.i + cont), (move.j + cont)) == CXCellState.P2);
+        //         cont++;
+        //         break;
+        //     }
+        // }
+        // r_up = cont - 1;
+
+        // // se sia a sinistra che a destra siamo bloccati da avversario allora la mossa
+        // // non ha valore (orizzontalmente)
+        // if (r_up_bound && l_down_bound) {
+        //     cont = 0;
+        // } else {
+        //     cont = r_up + l_down;
+        // }
+
+        // System.out.println("Diag:" + cont);
+        // maxCont = Math.max(cont, maxCont);
+        System.out.println(maxCont);
+        return maxCont;
     }
+
+    
 
     public String playerName() {
         return "Antonio";
