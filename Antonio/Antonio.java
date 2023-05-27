@@ -79,6 +79,25 @@ public class Antonio implements CXPlayer {
         return -1;
     }
 
+    public Integer[] sortFromMiddle(Integer[] L) {
+        Integer[] V = new Integer[L.length];
+        int cont = 0;
+        for (int i = 0; (i <= L.length / 2); i++) {
+            V[cont] = L[L.length / 2 + i];
+            cont++;
+            if (i != 0) {
+                V[cont] = L[L.length / 2 - i];
+                cont++;
+            }
+
+            if ((i + 1 == L.length / 2) && ((L.length % 2) == 0)) {
+                V[cont] = L[0];
+                break;
+            }
+        }
+        return V;
+    }
+
     public int selectColumn(CXBoard B) {
         START = System.currentTimeMillis();
 
@@ -114,21 +133,19 @@ public class Antonio implements CXPlayer {
             int outcome = Integer.MIN_VALUE, maxOutcome = outcome;
 
             // esamino tutte le colonne libere
-            for (int colIt : L) {
+            for (int colIt : sortFromMiddle(L)) {
                 checktime();
                 CXGameState stateAB = B.markColumn(colIt); // marco mossa da valutare
-                outcome = AlphaBetaPruning(B, false, Integer.MIN_VALUE, Integer.MAX_VALUE, depth, stateAB);
+                outcome = AlphaBetaPruning(B, false, Integer.MIN_VALUE, Integer.MAX_VALUE,
+                        depth, stateAB);
                 B.unmarkColumn();
-                if (outcome > maxOutcome) { // confronto il risultato della visita alpha beta corrente con
-                                            // quella
-                                            // precedente per salvare quello piu' vantaggioso
-                    // System.out.println(colIt);
+                if (outcome > maxOutcome) { // confronto il risultato della visita alpha beta
+                                            // corrente con quella precedente per salvare quello piu' vantaggioso
                     maxOutcome = outcome;
                     toMark = colIt;
                 }
-
             }
-            // B.markColumn(toMark);
+
             return toMark;
         } catch (TimeoutException e) {
             System.err.println("Timeout!!! Last computed column selected");
@@ -179,96 +196,140 @@ public class Antonio implements CXPlayer {
         }
     }
 
-    public int evaluate(CXBoard B) {
-        CXCell move = B.getLastMove();
-        int cont, maxCont;
-        // controllo verticale
+    public int evalVertical(CXBoard B, CXCell move) {
+        int cont;
         for (cont = 1; (move.i - cont) >= 0; cont++) {
             if (B.cellState((move.i - cont), move.j) == CXCellState.P2) {
                 cont++;
                 break;
             }
         }
-        cont = cont - 1;
-        System.out.println("Vert:" + cont);
-        maxCont = cont;
 
-        // controllo orizzontale
-        int l, r; // contatori left e right
+        // TODO decidere se tenerlo!
+        // if ((B.M - move.i) + cont - 1 < B.X) {
+        //     return 0;
+        // } 
+
+        return cont = cont - 1;
+    }
+
+    public int evalHorizontal(CXBoard B, CXCell move) {
+        int l, r, tot; // contatori
         boolean l_bound = true, r_bound = true; // variabili per il controllo della presenza di avversari alla fine
                                                 // della serie
                                                 // di chip consecutive
 
         // conta verso sinistra
-        for (cont = 1; (move.j - cont) >= 0; cont++) {
-            if (B.cellState(move.i, (move.j - cont)) != CXCellState.P1) {
-                l_bound = (B.cellState(move.i, (move.j - cont)) == CXCellState.P2);
-                cont++;
+        for (l = 1; (move.j - l) >= 0; l++) {
+            if (B.cellState(move.i, (move.j - l)) != CXCellState.P1) {
+                l_bound = (B.cellState(move.i, (move.j - l)) == CXCellState.P2);
+                l++;
                 break;
             }
         }
-        l = cont - 1;
+        l = l - 1;
 
         // conta verso destra
-        for (cont = 1; (move.j + cont) < B.N; cont++) {
-            if (B.cellState(move.i, (move.j + cont)) != CXCellState.P1) {
-                r_bound = (B.cellState(move.i, (move.j + cont)) == CXCellState.P2);
-                cont++;
+        for (r = 1; (move.j + r) < B.N; r++) {
+            if (B.cellState(move.i, (move.j + r)) != CXCellState.P1) {
+                r_bound = (B.cellState(move.i, (move.j + r)) == CXCellState.P2);
+                r++;
                 break;
             }
         }
-        r = cont - 1;
+        r = r - 1;
 
         // se sia a sinistra che a destra siamo bloccati da avversario allora la mossa
         // non ha valore (orizzontalmente)
         if (r_bound && l_bound) {
-            cont = 0;
+            tot = 0;
         } else {
-            cont = r + l + 1;
+            tot = r + l + 1;
         }
-        System.out.println("Orizz:" + cont);
-        maxCont = Math.max(cont, maxCont);
-
-        // controllo diagonale dx
-        // int l_down, r_up; // contatori left e right
-        // boolean l_down_bound = true, r_up_bound = true; // variabili per il controllo della presenza di avversari alla
-        //                                                 // fine della serie di chip consecutive
-
-        // // conta in basso a sinistra
-        // for (cont = 1; (((move.i - cont) >= 0) && ((move.j - cont) >= 0)); cont++) {
-        //     if (B.cellState((move.i - cont), (move.j - cont)) != CXCellState.P1) {
-        //         l_down_bound = (B.cellState((move.i - cont), (move.j - cont)) == CXCellState.P2);
-        //         cont++;
-        //         break;
-        //     }
-        // }
-        // l_down = cont - 1;
-
-        // // conta in alto a destra
-        // for (cont = 1; (((move.i + cont) < B.M) && ((move.j + cont) < B.N)); cont++) {
-        //     if (B.cellState((move.i + cont), (move.j + cont)) != CXCellState.P1) {
-        //         r_up_bound = (B.cellState((move.i + cont), (move.j + cont)) == CXCellState.P2);
-        //         cont++;
-        //         break;
-        //     }
-        // }
-        // r_up = cont - 1;
-
-        // // se sia a sinistra che a destra siamo bloccati da avversario allora la mossa
-        // // non ha valore (orizzontalmente)
-        // if (r_up_bound && l_down_bound) {
-        //     cont = 0;
-        // } else {
-        //     cont = r_up + l_down;
-        // }
-
-        // System.out.println("Diag:" + cont);
-        // maxCont = Math.max(cont, maxCont);
-        System.out.println(maxCont);
-        return maxCont;
+        // System.out.println("Orizz:" + tot);
+        return tot;
     }
 
-    
+    public int evalDiagonal(CXBoard B, CXCell move) {
+        // controllo diagonale
+        int l_down, r_up, tot; // contatori left e right e tot
+        boolean l_down_bound = true, r_up_bound = true; // variabili per il controllo
+                                                        // della presenza di avversari alla
+                                                        // fine della serie di chip consecutive
+
+        // conta in basso a sinistra
+        for (l_down = 1; (((move.i - l_down) >= 0) && ((move.j - l_down) >= 0)); l_down++) {
+            if (B.cellState((move.i - l_down), (move.j - l_down)) != CXCellState.P1) {
+                l_down_bound = (B.cellState((move.i - l_down), (move.j - l_down)) == CXCellState.P2);
+                l_down++;
+                break;
+            }
+        }
+        l_down = l_down - 1;
+
+        // conta in alto a destra
+        for (r_up = 1; (((move.i + r_up) < B.M) && ((move.j + r_up) < B.N)); r_up++) {
+            if (B.cellState((move.i + r_up), (move.j + r_up)) != CXCellState.P1) {
+                r_up_bound = (B.cellState((move.i + r_up), (move.j + r_up)) == CXCellState.P2);
+                r_up++;
+                break;
+            }
+        }
+        r_up = r_up - 1;
+
+        // se sia a sinistra che a destra siamo bloccati da avversario allora la
+        // mossa non ha valore (orizzontalmente)
+        if (r_up_bound && l_down_bound) {
+            tot = 0;
+        } else {
+            tot = r_up + l_down;
+        }
+
+        return tot / 3; // TODO controllare il /3
+    }
+
+    public int evalAntiDiagonal(CXBoard B, CXCell move) {
+        // controllo anti-diagonale
+        int l_up, r_down, tot; // contatori left e right e tot
+        boolean l_up_bound = true, r_down_bound = true; // variabili per il controllo
+                                                        // della presenza di avversari alla
+                                                        // fine della serie di chip consecutive
+
+        // conta in basso a destra
+        for (r_down = 1; (((move.i - r_down) >= 0) && ((move.j - r_down) >= 0)); r_down++) {
+            if (B.cellState((move.i - r_down), (move.j - r_down)) != CXCellState.P1) {
+                r_down_bound = (B.cellState((move.i - r_down), (move.j - r_down)) == CXCellState.P2);
+                r_down++;
+                break;
+            }
+        }
+        r_down = r_down - 1;
+
+        // conta in alto a sinistra
+        for (l_up = 1; (((move.i + l_up) < B.M) && ((move.j + l_up) < B.N)); l_up++) {
+            if (B.cellState((move.i + l_up), (move.j + l_up)) != CXCellState.P1) {
+                l_up_bound = (B.cellState((move.i + l_up), (move.j + l_up)) == CXCellState.P2);
+                l_up++;
+                break;
+            }
+        }
+        l_up = l_up - 1;
+
+        // se sia a sinistra che a destra siamo bloccati da avversario allora la
+        // mossa non ha valore (orizzontalmente)
+        if (l_up_bound && r_down_bound) {
+            tot = 0;
+        } else {
+            tot = l_up + r_down;
+        }
+
+        return tot / 3; // TODO controllare il /3
+    }
+
+    public int evaluate(CXBoard B) {
+        CXCell move = B.getLastMove();
+        return evalVertical(B, move) + evalHorizontal(B, move);
+    }
 
     public String playerName() {
         return "Antonio";
