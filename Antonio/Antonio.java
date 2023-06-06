@@ -33,23 +33,7 @@ public class Antonio implements CXPlayer {
         TIMEOUT = timeout_in_secs;
     }
 
-    private void checktime() throws TimeoutException {
-        if ((System.currentTimeMillis() - START) / 1000.0 >= TIMEOUT * (99.0 / 100.0))
-            throw new TimeoutException();
-    }
-
-    private int singleMoveWin(CXBoard B, Integer[] L) throws TimeoutException {
-        for (int i : L) {
-            checktime(); // controlla timeout a ogni iterazione
-            CXGameState state = B.markColumn(i);
-            if (state == myWin)
-                return i; // colonna vincente trovata: ritorna immediatamente
-            B.unmarkColumn();
-        }
-        return -1;
-    }
-
-    // se Antonio è primo allora avversario è secondo e viceversa
+    // if Antonio is first then opponent is second and viceversa
     private CXCellState opponentState() {
         if (firstPlayer) {
             return CXCellState.P2;
@@ -58,7 +42,7 @@ public class Antonio implements CXPlayer {
         }
     }
 
-    // stato di Antonio
+    // Antonio's state
     private CXCellState myState() {
         if (firstPlayer) {
             return CXCellState.P1;
@@ -67,12 +51,28 @@ public class Antonio implements CXPlayer {
         }
     }
 
-    // ABBIAMO CONTROLLATO TUTTE LE MOSSE CHE POTREBBE FARE L'AVVERSARIO
-    // IMMEDIATAMENTE
-    // SENZA CONSIDERARE LE MOSSE CHE POTREBBE FARE SOPRA ALLA NOSTRA FUTURA MOSSA
+    // timeout control
+    private void checktime() throws TimeoutException {
+        if ((System.currentTimeMillis() - START) / 1000.0 >= TIMEOUT * (99.0 / 100.0))
+            throw new TimeoutException();
+    }
 
-    // NON SERVE CONTROLLARE TUTTE LE VOLTE TUTTA LA TABELLA
-    // BASTA CONTROLLARE QUELLA IN CUI SI METTE L'IPOTETICA MOSSA
+    private int singleMoveWin(CXBoard B, Integer[] L) throws TimeoutException {
+        for (int i : L) {
+            checktime(); // timeout control at every iteration
+            CXGameState state = B.markColumn(i);
+            if (state == myWin)
+                return i; // winning column found: return immediately
+            B.unmarkColumn();
+        }
+        return -1;
+    }
+
+    // Checking all the moves that the opponent can make immediately
+    // ignoring moves he might do above Antonio's current move
+
+    // Not necessary to control all the matrix every time
+    // it's enough to control the column of the current evaluated move
     private int singleMoveBlock(CXBoard B, Integer[] L) throws TimeoutException {
         B.markColumn(L[0]);
         for (int j = L[0 + 1]; j < L.length; j++) {
@@ -98,7 +98,7 @@ public class Antonio implements CXPlayer {
         return -1;
     }
 
-    // ordinamento vettore colonne libere dal centro agli estremi
+    // array permutation from center to the extremes
     public Integer[] sortFromMiddle(Integer[] L) {
         Integer[] V = new Integer[L.length];
         int cont = 0;
@@ -122,25 +122,25 @@ public class Antonio implements CXPlayer {
         START = System.currentTimeMillis();
 
         Integer[] L = B.getAvailableColumns();
-        int toMark = L[rand.nextInt(L.length)]; // inizializzo a random
+        int toMark = L[rand.nextInt(L.length)]; // initialization random
 
-        // una sola colonna libera
+        // one free column only
         if (L.length == 1) {
             return L[0];
         }
 
         try {
-            // vincita con una mossa sola
+            // win with single move
             int colW = singleMoveWin(B, L);
             if (colW != -1)
                 return colW;
-            // sconfitta alla prossima mossa dell'avversario
+            // loss at next opponent's move
             int colL = singleMoveBlock(B, L);
             if (colL != -1)
                 return colL;
 
             // alphabeta
-            // seleziono della depth massima in base a dimensione board
+            // selecting maximum depth according to the dimension of the board
             int depth;
             if ((B.M * B.N) < 100) {
                 depth = 7;
@@ -149,23 +149,22 @@ public class Antonio implements CXPlayer {
             } else {
                 depth = 1;
             }
+
             int outcome = Integer.MIN_VALUE, maxOutcome = outcome;
             Integer[] S = sortFromMiddle(L);
 
-            // esamino tutte le colonne libere
+            // checking all available columns
             for (int colIt : S) {
                 checktime();
-                CXGameState stateAB = B.markColumn(colIt); // marco mossa da valutare
+                CXGameState stateAB = B.markColumn(colIt); // mark move to value
                 outcome = AlphaBetaPruning(B, false, Integer.MIN_VALUE, Integer.MAX_VALUE,
                         depth, stateAB);
                 B.unmarkColumn();
-                if (outcome > maxOutcome) { // confronto il risultato della visita alpha beta
-                                            // corrente con quella precedente per salvare quello piu' vantaggioso
+                if (outcome > maxOutcome) { // comparison between the ABP result and current maximization value
                     maxOutcome = outcome;
                     toMark = colIt;
                 }
             }
-
             return toMark;
         } catch (TimeoutException e) {
             System.err.println("Timeout!!! Last computed column selected");
@@ -213,13 +212,13 @@ public class Antonio implements CXPlayer {
     }
 
     public int evaluate(CXGameState state, CXBoard B) {
-        if (state == myWin) { // vinco
+        if (state == myWin) { // Antonio wins
             return MAX;
-        } else if (state == yourWin) { // perdo
+        } else if (state == yourWin) { // Antonio loses
             return MIN;
-        } else if (state == CXGameState.DRAW) { // pareggio
+        } else if (state == CXGameState.DRAW) { // Draw
             return 0;
-        } else { // max depth
+        } else { // max depth reached
             int maxd = evalMaxDepth(B);
             return maxd;
         }
@@ -233,7 +232,7 @@ public class Antonio implements CXPlayer {
                 break;
             }
         }
-        // controlla se è possibile vincere verso l'alto
+        // control if it's possible to win upwards
         if ((B.M - move.i) + cont - 1 < B.X) {
             return 0;
         }
@@ -242,11 +241,11 @@ public class Antonio implements CXPlayer {
     }
 
     public int evalHorizontal(CXBoard B, CXCell move) {
-        int l, r, tot; // contatori
-        boolean l_bound = true, r_bound = true; // variabili per il controllo della presenza di avversari alla fine
-                                                // della serie di dischi consecutive
+        int l, r, tot; // counters
+        boolean l_bound = true, r_bound = true; // variables used to control the presence of opponent's disks at the
+                                                // boundaries of Antonio's consecutives disks
 
-        // conta verso sinistra
+        // count to the left
         for (l = 1; (move.j - l) >= 0; l++) {
             if (B.cellState(move.i, (move.j - l)) != myState()) {
                 l_bound = (B.cellState(move.i, (move.j - l)) == opponentState());
@@ -256,7 +255,7 @@ public class Antonio implements CXPlayer {
         }
         l = l - 1;
 
-        // conta verso destra
+        // count to the right
         for (r = 1; (move.j + r) < B.N; r++) {
             if (B.cellState(move.i, (move.j + r)) != myState()) {
                 r_bound = (B.cellState(move.i, (move.j + r)) == opponentState());
@@ -266,8 +265,7 @@ public class Antonio implements CXPlayer {
         }
         r = r - 1;
 
-        // se sia a sinistra che a destra siamo bloccati da avversario allora la mossa
-        // non ha valore (orizzontalmente)
+        // if Antonio is blocked on the right and on the left, the move has no value
         if (r_bound && l_bound) {
             tot = 0;
         } else {
@@ -277,13 +275,12 @@ public class Antonio implements CXPlayer {
     }
 
     public int evalDiagonal(CXBoard B, CXCell move) {
-        // controllo diagonale
-        int l_down, r_up, tot; // contatori left e right e tot
-        boolean l_down_bound = true, r_up_bound = true; // variabili per il controllo
-                                                        // della presenza di avversari alla
-                                                        // fine della serie di dischi consecutivi
+        // diagonal control
+        int l_down, r_up, tot; // left, right, tot counters
+        boolean l_down_bound = true, r_up_bound = true; // variables used to control the presence of opponent's disks at
+                                                        // the boundaries of Antonio's consecutives disks
 
-        // conta in basso a sinistra
+        // count downwards to the left
         for (l_down = 1; (((move.i - l_down) >= 0) && ((move.j - l_down) >= 0)); l_down++) {
             if (B.cellState((move.i - l_down), (move.j - l_down)) != myState()) {
                 l_down_bound = (B.cellState((move.i - l_down), (move.j - l_down)) == opponentState());
@@ -293,7 +290,7 @@ public class Antonio implements CXPlayer {
         }
         l_down = l_down - 1;
 
-        // conta in alto a destra
+        // count upwards to the right
         for (r_up = 1; (((move.i + r_up) < B.M) && ((move.j + r_up) < B.N)); r_up++) {
             if (B.cellState((move.i + r_up), (move.j + r_up)) != myState()) {
                 r_up_bound = (B.cellState((move.i + r_up), (move.j + r_up)) == opponentState());
@@ -303,8 +300,8 @@ public class Antonio implements CXPlayer {
         }
         r_up = r_up - 1;
 
-        // se sia a sinistra che a destra siamo bloccati da avversario allora la
-        // mossa non ha valore (diagonalmente)
+        // if Antonio is blocked on the right and on the left, the move has no value
+        // (diagonally)
         if (r_up_bound && l_down_bound) {
             tot = 0;
         } else {
@@ -315,13 +312,12 @@ public class Antonio implements CXPlayer {
     }
 
     public int evalAntiDiagonal(CXBoard B, CXCell move) {
-        // controllo anti-diagonale
-        int l_up, r_down, tot; // contatori left e right e tot
-        boolean l_up_bound = true, r_down_bound = true; // variabili per il controllo
-                                                        // della presenza di avversari alla
-                                                        // fine della serie di dischi consecutive
+        // anti-diagonal control
+        int l_up, r_down, tot; // left, right, tot counters
+        boolean l_up_bound = true, r_down_bound = true; // variables used to control the presence of opponent's disks at
+                                                        // the boundaries of Antonio's consecutives disks
 
-        // conta in basso a destra
+        // count downwards to the right
         for (r_down = 1; (((move.i - r_down) >= 0) && ((move.j + r_down) < B.N)); r_down++) {
             if (B.cellState((move.i - r_down), (move.j + r_down)) != myState()) {
                 r_down_bound = (B.cellState((move.i - r_down), (move.j + r_down)) == opponentState());
@@ -331,7 +327,7 @@ public class Antonio implements CXPlayer {
         }
         r_down = r_down - 1;
 
-        // conta in alto a sinistra
+        // count upwards to the left
         for (l_up = 1; (((move.i + l_up) < B.M) && ((move.j - l_up) >= 0)); l_up++) {
             if (B.cellState((move.i + l_up), (move.j - l_up)) != myState()) {
                 l_up_bound = (B.cellState((move.i + l_up), (move.j - l_up)) == opponentState());
@@ -341,17 +337,17 @@ public class Antonio implements CXPlayer {
         }
         l_up = l_up - 1;
 
-        // se sia a sinistra che a destra siamo bloccati da avversario allora la
-        // mossa non ha valore (antidiagonalmente)
+        // if Antonio is blocked on the right and on the left, the move has no value
+        // (anti-diagonally)
         if (l_up_bound && r_down_bound) {
             tot = 0;
         } else {
             tot = l_up + r_down;
         }
-
         return tot;
     }
 
+    // total evaluation ABPruning base case
     public int evalMaxDepth(CXBoard B) {
         CXCell move = B.getLastMove();
         return evalVertical(B, move) + evalHorizontal(B, move) + evalDiagonal(B, move) + evalAntiDiagonal(B, move);
