@@ -23,16 +23,18 @@ Antonio is a player developed by Marco Milani and Simone Tassi for the Algorithm
 ### CXPlayerTester application:
 
 - Output score only:
-```
-	java -cp ".." connectx.CXPlayerTester 6 7 4 connectx.L0.L0 connectx.L1.L1
-```
+
+
+		java -cp ".." connectx.CXPlayerTester 6 7 4 connectx.L0.L0 connectx.L1.L1
+
 
 - Verbose output
-```
-	java -cp ".." connectx.CXPlayerTester 6 7 4 connectx.L0.L0 connectx.L1.L1 -v
-```
+
+		java -cp ".." connectx.CXPlayerTester 6 7 4 connectx.L0.L0 connectx.L1.L1 -v
+
 
 - Verbose output and customized timeout (1 sec) and number of game repetitions (10 rounds)
-```
-	java -cp ".." connectx.CXPlayerTester 6 7 4 connectx.L0.L0 connectx.L1.L1 -v -t 1 -r 10
-```
+
+		java -cp ".." connectx.CXPlayerTester 6 7 4 connectx.L0.L0 connectx.L1.L1 -v -t 1 -r 10
+
+
