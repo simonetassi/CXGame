@@ -1,37 +1,38 @@
-# CXGame (A.A. 2022-2023)
-## Antonio is a player developed by Marco Milani e Simone Tassi 
+# CXGame
+Antonio is a player developed by Marco Milani and Simone Tassi for the Algorithms and Data Structures course at unibo.
 
-### Instructions:
+## Instructions:
 
-- Command-line compile.  In the connectx/ directory run:
+- Command-line compile.  In the `connectx` directory run:
 
 		javac -cp ".." *.java */*.java
 
 
-CXGame application:
+### CXGame application:
 
-- Human vs Computer.  In the connectx/ directory run:
+- Human vs Computer.  In the `connectx` directory run:
 	
 		java -cp ".." connectx.CXGame 6 7 4 connectx.L0.L0
 
 
-- Computer vs Computer. In the connectx/ directory run:
+- Computer vs Computer. In the `connectx` directory run:
 
 		java -cp ".." connectx.CXGame 6 7 4 connectx.Antonio.Antonio connectx.L1.L1
 
 
-CXPlayerTester application:
+### CXPlayerTester application:
 
 - Output score only:
-
+```
 	java -cp ".." connectx.CXPlayerTester 6 7 4 connectx.L0.L0 connectx.L1.L1
-
+```
 
 - Verbose output
-
+```
 	java -cp ".." connectx.CXPlayerTester 6 7 4 connectx.L0.L0 connectx.L1.L1 -v
-
+```
 
 - Verbose output and customized timeout (1 sec) and number of game repetitions (10 rounds)
-
+```
 	java -cp ".." connectx.CXPlayerTester 6 7 4 connectx.L0.L0 connectx.L1.L1 -v -t 1 -r 10
+```
